@@ -2,6 +2,49 @@
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
   <title>Todo App</title>
+  <style>
+    body {
+      font-family: 'Arial', sans-serif;
+      margin: 20px;
+    }
+
+    h1 {
+      text-align: center;
+    }
+
+    form {
+      margin-bottom: 20px;
+    }
+
+    ul {
+      list-style: none;
+      padding: 0;
+    }
+
+    li {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      margin-bottom: 5px;
+      padding: 10px;
+    }
+
+    li a {
+      margin-right: 10px;
+      text-decoration: none;
+      color: #333;
+    }
+
+    li button {
+      background-color: #dc3545;
+      color: #fff;
+      border: none;
+      padding: 5px 10px;
+      cursor: pointer;
+    }
+  </style>
 </head>
 <body>
 <h1>Todo App</h1>
@@ -12,13 +55,11 @@
   <button type="button" onclick="submitForm()">Add Todo</button>
 </form>
 
-<ul>
-  <li th:each="todo : ${todos}">
-    <span th:text="${todo.title}"></span>
-    <input type="checkbox" th:checked="${todo.completed}">
-    <a th:href="@{'/api/todos/' + ${todo.id}}">Details</a>
-  </li>
-</ul>
+<h2>Pending Todos</h2>
+<ul id="pendingList"></ul>
+
+<h2>Done Todos</h2>
+<ul id="doneList"></ul>
 
 <script>
   function submitForm() {
@@ -44,11 +85,96 @@
             })
             .then(data => {
               console.log(data);
+              updateTodoLists();
             })
             .catch(error => {
               console.error('There was a problem with the fetch operation:', error);
             });
   }
+
+  function updateCompletionStatus(todoId, checkbox) {
+    fetch(`/api/todos/${todoId}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ completed: checkbox.checked })
+    })
+            .then(response => {
+              if (!response.ok) {
+                throw new Error('Network response was not ok');
+              }
+              return response.json();
+            })
+            .then(data => {
+              console.log(data);
+              updateTodoLists();
+            })
+            .catch(error => {
+              console.error('There was a problem with the fetch operation:', error);
+            });
+  }
+
+  function showDetails(todoId) {
+    window.location.href = `/api/todos/${todoId}`;
+  }
+
+  function deleteTodo(todoId) {
+    fetch(`/api/todos/${todoId}`, {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+    })
+            .then(response => {
+              if (!response.ok) {
+                throw new Error('Network response was not ok');
+              }
+              return response.json();
+            })
+            .then(data => {
+              console.log(data);
+              updateTodoLists();
+            })
+            .catch(error => {
+              console.error('There was a problem with the fetch operation:', error);
+            });
+  }
+
+  function updateTodoLists() {
+    fetch('/api/todos')
+            .then(response => {
+              if (!response.ok) {
+                throw new Error('Network response was not ok');
+              }
+              return response.json();
+            })
+            .then(data => {
+              var pendingTodos = data.filter(todo => !todo.completed);
+              var doneTodos = data.filter(todo => todo.completed);
+
+              updateList('pendingList', pendingTodos);
+              updateList('doneList', doneTodos);
+            })
+            .catch(error => {
+              console.error('There was a problem with the fetch operation:', error);
+            });
+  }
+
+  function updateList(listId, todos) {
+    var list = document.getElementById(listId);
+    list.innerHTML = '';
+
+    todos.forEach(todo => {
+      var listItem = document.createElement('li');
+      listItem.innerHTML = '<span>' + todo.title + '</span>' +
+              '<a href="#" onclick="showDetails(' + todo.id + ')">Details</a>' +
+              '<button type="button" onclick="deleteTodo(' + todo.id + ')">Delete</button>';
+      list.appendChild(listItem);
+    });
+  }
+
+  updateTodoLists();
 </script>
 
 </body>
