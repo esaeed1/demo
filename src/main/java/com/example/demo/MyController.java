@@ -1,9 +1,6 @@
 package com.example.demo;
 
-import com.example.demo.Todo;
-import com.example.demo.TodoRepository;
 import org.springframework.http.ResponseEntity;
-import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -59,11 +56,4 @@ public class MyController {
         }
     }
 
-    @GetMapping("/form")
-    public String getTodos(Model model) {
-        List<Todo> todos = todoRepository.findAll();
-        model.addAttribute("todos", todos);
-        model.addAttribute("newTodo", new Todo());
-        return "index";
-    }
 }
