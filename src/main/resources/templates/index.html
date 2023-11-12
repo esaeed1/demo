@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+  <title>Todo App</title>
+</head>
+<body>
+<h1>Todo App</h1>
+
+<form th:action="@{/api/todos}" th:object="${newTodo}" method="post">
+  <label for="title">Title:</label>
+  <input type="text" id="title" th:field="*{title}" required>
+  <button type="submit">Add Todo</button>
+</form>
+
+<ul>
+  <li th:each="todo : ${todos}">
+    <span th:text="${todo.title}"></span>
+    <input type="checkbox" th:checked="${todo.completed}" disabled>
+    <a th:href="@{'/api/todos/' + ${todo.id}}">Details</a>
+  </li>
+</ul>
+</body>
+</html>
