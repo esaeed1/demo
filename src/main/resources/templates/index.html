@@ -114,7 +114,34 @@
             });
     }
 
+    function createTasksFromData(data) {
+        data.forEach(task => {
+            createTask(task.title, task.id, task.completed);
+        });
+    }
+
+    function fetchTasksAndCreate() {
+        console.log('Fetching tasks...');
+        fetch('/api/todos')
+            .then(response => {
+                console.log('Response received:', response);
+                return response.json();
+            })
+            .then(data => {
+                console.log('Data received:', data);
+                createTasksFromData(data);
+            })
+            .catch(error => {
+                console.error('Error fetching tasks:', error);
+            });
+    }
+
+
+    fetchTasksAndCreate();
+
     function createTask(title, todoId, status) {
+        console.log('Status:', status);
+
         const task = document.createElement('div');
         task.className = 'task';
         task.id = `task-${todoId}`;
@@ -124,29 +151,31 @@
 
         task.innerText = title;
 
-        if (status === -1) {
-            initialColumn = 'start';
-        } else if (status === 0) {
-            initialColumn = 'inProgress';
-        } else {
+        let initialColumn;
+
+        if (status === true) {
             initialColumn = 'done';
+        } else if (status === false) {
+            initialColumn = 'start';
+        } else {
+            console.error('Unknown status value:', status);
+            return;
         }
+
+        console.log('Initial Column:', initialColumn);
+
         const initialColumnElement = document.getElementById(`${initialColumn}Column`);
-        initialColumnElement.appendChild(task);
+        console.log('Column Element:', initialColumnElement);
+
+        if (initialColumnElement) {
+            initialColumnElement.appendChild(task);
+        } else {
+            console.error(`Column Element with ID '${initialColumn}Column' not found.`);
+        }
 
         return task;
     }
 
-    fetch('/api/todos')
-        .then(response => response.json())
-        .then(data => {
-            data.forEach(task => {
-                createTask(task.title, task.id, task.completed);
-            });
-        })
-        .catch(error => {
-            console.error('Error fetching tasks:', error);
-        });
 
     function submitForm() {
         var form = document.getElementById('todoForm');
@@ -171,7 +200,6 @@
             })
             .then(data => {
                 console.log(data);
-
                 createTask(data.title, data.id, -1);
             })
             .catch(error => {
