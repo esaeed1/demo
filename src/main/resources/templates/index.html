@@ -1,181 +1,183 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
-  <title>Todo App</title>
-  <style>
-    body {
-      font-family: 'Arial', sans-serif;
-      margin: 20px;
-    }
+    <title>Todo App</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            background-color: #f4f4f4;
+        }
 
-    h1 {
-      text-align: center;
-    }
+        .task-board {
+            display: flex;
+            flex-grow: 1;
+            padding: 20px;
+        }
 
-    form {
-      margin-bottom: 20px;
-    }
+        .task-column {
+            flex-grow: 1;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            padding: 16px;
+            margin: 8px;
+            background-color: #fff;
+        }
 
-    ul {
-      list-style: none;
-      padding: 0;
-    }
-
-    li {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      border: 1px solid #ddd;
-      border-radius: 5px;
-      margin-bottom: 5px;
-      padding: 10px;
-    }
-
-    li a {
-      margin-right: 10px;
-      text-decoration: none;
-      color: #333;
-    }
-
-    li button {
-      background-color: #dc3545;
-      color: #fff;
-      border: none;
-      padding: 5px 10px;
-      cursor: pointer;
-    }
-  </style>
+        .task {
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            padding: 8px;
+            margin-bottom: 8px;
+            background-color: #fff;
+            cursor: pointer;
+        }
+    </style>
 </head>
 <body>
 <h1>Todo App</h1>
 
+<div class="task-board" id="taskBoard">
+    <div class="task-column" id="startColumn" ondrop="drop(event, 'start')" ondragover="allowDrop(event)">
+        <h2>To Do</h2>
+    </div>
+
+    <div class="task-column" id="inProgressColumn" ondrop="drop(event, 'inProgress')" ondragover="allowDrop(event)">
+        <h2>In Progress</h2>
+    </div>
+
+    <div class="task-column" id="doneColumn" ondrop="drop(event, 'done')" ondragover="allowDrop(event)">
+        <h2>Done</h2>
+    </div>
+</div>
+
 <form id="todoForm" th:action="@{/api/todos}" th:object="${newTodo}" method="post">
-  <label for="title">Title:</label>
-  <input type="text" id="title" th:field="*{title}" required>
-  <button type="button" onclick="submitForm()">Add Todo</button>
+    <label for="title">Title:</label>
+    <input type="text" id="title" th:field="*{title}" required>
+    <button type="button" onclick="submitForm()">Add Todo</button>
 </form>
 
-<h2>Pending Todos</h2>
-<ul id="pendingList"></ul>
-
-<h2>Done Todos</h2>
-<ul id="doneList"></ul>
-
 <script>
-  function submitForm() {
-    var form = document.getElementById('todoForm');
-    var formData = new FormData(form);
-    var jsonObject = {};
-    formData.forEach((value, key) => {
-      jsonObject[key] = value;
-    });
+    function allowDrop(event) {
+        event.preventDefault();
+    }
 
-    fetch(form.action, {
-      method: form.method,
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(jsonObject)
-    })
+    function drag(event) {
+        event.dataTransfer.setData("text/plain", event.target.id);
+    }
+
+    function drop(event, column) {
+        event.preventDefault();
+        const data = event.dataTransfer.getData("text/plain");
+        const draggedElement = document.getElementById(data);
+
+        const targetColumn = document.getElementById(`${column}Column`);
+        targetColumn.appendChild(draggedElement);
+
+        if (column === 'done') {
+            const todoId = draggedElement.getAttribute('data-todo-id');
+            updateTodoStatus(todoId, 1);
+        } else if (column === 'start') {
+            const todoId = draggedElement.getAttribute('data-todo-id');
+            updateTodoStatus(todoId, -1);
+        } else if (column === 'inProgress') {
+            const todoId = draggedElement.getAttribute('data-todo-id');
+            updateTodoStatus(todoId, 0);
+        }
+    }
+
+    function updateTodoStatus(todoId, status) {
+        console.log(`Updating todo ${todoId} with status ${status}`);
+
+        fetch(`/api/todos/${todoId}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                completed: status
+            })
+        })
             .then(response => {
-              if (!response.ok) {
-                throw new Error('Network response was not ok');
-              }
-              return response.json();
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.json();
             })
             .then(data => {
-              console.log(data);
-              updateTodoLists();
+                console.log(data);
             })
             .catch(error => {
-              console.error('There was a problem with the fetch operation:', error);
+                console.error('There was a problem with the fetch operation:', error);
             });
-  }
+    }
 
-  function updateCompletionStatus(todoId, checkbox) {
-    fetch(`/api/todos/${todoId}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ completed: checkbox.checked })
-    })
-            .then(response => {
-              if (!response.ok) {
-                throw new Error('Network response was not ok');
-              }
-              return response.json();
-            })
-            .then(data => {
-              console.log(data);
-              updateTodoLists();
-            })
-            .catch(error => {
-              console.error('There was a problem with the fetch operation:', error);
-            });
-  }
+    function createTask(title, todoId, status) {
+        const task = document.createElement('div');
+        task.className = 'task';
+        task.id = `task-${todoId}`;
+        task.setAttribute('data-todo-id', todoId);
+        task.draggable = true;
+        task.ondragstart = drag;
 
-  function showDetails(todoId) {
-    window.location.href = `/api/todos/${todoId}`;
-  }
+        task.innerText = title;
 
-  function deleteTodo(todoId) {
-    fetch(`/api/todos/${todoId}`, {
-      method: 'DELETE',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-    })
-            .then(response => {
-              if (!response.ok) {
-                throw new Error('Network response was not ok');
-              }
-              return response.json();
-            })
-            .then(data => {
-              console.log(data);
-              updateTodoLists();
-            })
-            .catch(error => {
-              console.error('There was a problem with the fetch operation:', error);
-            });
-  }
+        if (status === -1) {
+            initialColumn = 'start';
+        } else if (status === 0) {
+            initialColumn = 'inProgress';
+        } else {
+            initialColumn = 'done';
+        }
+        const initialColumnElement = document.getElementById(`${initialColumn}Column`);
+        initialColumnElement.appendChild(task);
 
-  function updateTodoLists() {
+        return task;
+    }
+
     fetch('/api/todos')
+        .then(response => response.json())
+        .then(data => {
+            data.forEach(task => {
+                createTask(task.title, task.id, task.completed);
+            });
+        })
+        .catch(error => {
+            console.error('Error fetching tasks:', error);
+        });
+
+    function submitForm() {
+        var form = document.getElementById('todoForm');
+        var formData = new FormData(form);
+        var jsonObject = {};
+        formData.forEach((value, key) => {
+            jsonObject[key] = value;
+        });
+
+        fetch(form.action, {
+            method: form.method,
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(jsonObject)
+        })
             .then(response => {
-              if (!response.ok) {
-                throw new Error('Network response was not ok');
-              }
-              return response.json();
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.json();
             })
             .then(data => {
-              var pendingTodos = data.filter(todo => !todo.completed);
-              var doneTodos = data.filter(todo => todo.completed);
+                console.log(data);
 
-              updateList('pendingList', pendingTodos);
-              updateList('doneList', doneTodos);
+                createTask(data.title, data.id, -1);
             })
             .catch(error => {
-              console.error('There was a problem with the fetch operation:', error);
+                console.error('There was a problem with the fetch operation:', error);
             });
-  }
-
-  function updateList(listId, todos) {
-    var list = document.getElementById(listId);
-    list.innerHTML = '';
-
-    todos.forEach(todo => {
-      var listItem = document.createElement('li');
-      listItem.innerHTML = '<span>' + todo.title + '</span>' +
-              '<a href="#" onclick="showDetails(' + todo.id + ')">Details</a>' +
-              '<button type="button" onclick="deleteTodo(' + todo.id + ')">Delete</button>';
-      list.appendChild(listItem);
-    });
-  }
-
-  updateTodoLists();
+    }
 </script>
-
 </body>
 </html>

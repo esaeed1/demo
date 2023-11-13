@@ -38,7 +38,9 @@ public class MyController {
         if (existingTodo.isPresent()) {
             Todo todo = existingTodo.get();
             todo.setTitle(updatedTodo.getTitle());
+
             todo.setCompleted(updatedTodo.isCompleted());
+
             todoRepository.save(todo);
             return ResponseEntity.ok(todo);
         } else {
